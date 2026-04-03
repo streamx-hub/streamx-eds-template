@@ -1,0 +1,39 @@
+{
+  "specversion": "1.0",
+  "id": "Accent Furniture",
+  "source": "demo-puresight-starter",
+  "type": "com.streamx.blueprints.data.published.v1",
+  "datacontenttype": "application/json",
+  "subject": "cat:Accent Furniture",
+  "time": "2026-01-01T00:00:00.000000Z",
+  "data": {
+    "content": "eyJpZCI6IkFjY2VudCBGdXJuaXR1cmUiLCJzbHVnIjoiYWNjZW50LWZ1cm5pdHVyZSIsIm5hbWUiOiJBY2NlbnQgRnVybml0dXJlIn0=",
+    "type": "data/category"
+  }
+}
+{
+  "specversion": "1.0",
+  "id": "Bar & Serving Carts",
+  "source": "demo-puresight-starter",
+  "type": "com.streamx.blueprints.data.published.v1",
+  "datacontenttype": "application/json",
+  "subject": "cat:Bar & Serving Carts",
+  "time": "2026-01-01T00:00:00.000000Z",
+  "data": {
+    "content": "eyJpZCI6IkJhciAmIFNlcnZpbmcgQ2FydHMiLCJzbHVnIjoiYmFyLSYtc2VydmluZy1jYXJ0cyIsIm5hbWUiOiJCYXIgJiBTZXJ2aW5nIENhcnRzIn0=",
+    "type": "data/category"
+  }
+}
+{
+  "specversion": "1.0",
+  "id": "Bar & Serving Carts",
+  "source": "demo-puresight-starter",
+  "type": "com.streamx.blueprints.data.published.v1",
+  "datacontenttype": "application/json",
+  "subject": "super subject",
+  "time": "2026-01-01T00:00:00.000000Z",
+  "data": {
+    "content": "eyJpZCI6IkJhciAmIFNlcnZpbmcgQ2FydHMiLCJzbHVnIjoiYmFyLSYtc2VydmluZy1jYXJ0cyIsIm5hbWUiOiJCYXIgJiBTZXJ2aW5nIENhcnRzIn0=",
+    "type": "data/category"
+  }
+}
