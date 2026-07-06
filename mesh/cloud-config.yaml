@@ -1,0 +1,12 @@
+global:
+  services:
+    edge:
+      opensearch-sink:
+        replicas: 2
+      web-server-sink:
+        replicas: 2
+clusters:
+  eu-west-par-processing:
+    enabled: true
+  eu-west-par-edge:
+    enabled: true
