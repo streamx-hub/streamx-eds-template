@@ -2,8 +2,10 @@ global:
   services:
     edge:
       opensearch-sink:
+        stateful: true
         replicas: 2
       web-server-sink:
+        stateful: true
         replicas: 2
 clusters:
   eu-west-par-processing:
