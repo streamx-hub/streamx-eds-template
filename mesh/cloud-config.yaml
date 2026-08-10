@@ -10,5 +10,5 @@ global:
 clusters:
   eu-west-par-processing:
     enabled: true
-  eu-west-par-edge:
+  eu-south-mil-edge:
     enabled: true
