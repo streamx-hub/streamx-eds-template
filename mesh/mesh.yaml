@@ -17,7 +17,7 @@ descriptors:
     type: processing
     containers:
       processor:
-        image: ghcr.io/streamx-com/streamx-blueprints/external-references-rewriter:3.0.19-native
+        image: ghcr.io/streamx-com/streamx-blueprints/external-references-rewriter:3.0.21-native
         incoming:
           incoming-resources: {}
         outgoing:
@@ -31,7 +31,7 @@ descriptors:
         size: 5Gi
     containers:
       processor:
-        image: ghcr.io/streamx-com/streamx-blueprints/resource-downloader:3.0.19-native
+        image: ghcr.io/streamx-com/streamx-blueprints/resource-downloader:3.0.21-native
         incoming:
           download-requests: {}
         outgoing:
@@ -45,7 +45,7 @@ descriptors:
     type: processing
     containers:
       processor:
-        image: ghcr.io/streamx-com/streamx-blueprints/indexable-resources-producer:3.0.19-native
+        image: ghcr.io/streamx-com/streamx-blueprints/indexable-resources-producer:3.0.21-native
         incoming:
           pages: {}
           fragments: {}
@@ -64,7 +64,7 @@ descriptors:
         persistent: true
     containers:
       sink:
-        image: ghcr.io/streamx-com/streamx-blueprints/opensearch-sink:3.0.19-native
+        image: ghcr.io/streamx-com/streamx-blueprints/opensearch-sink:3.0.21-native
         incoming:
           indexable-resources:
             initState: delta
@@ -97,7 +97,7 @@ descriptors:
         persistent: true
     containers:
       sink:
-        image: ghcr.io/streamx-com/streamx-blueprints/web-server-sink:3.0.19-native
+        image: ghcr.io/streamx-com/streamx-blueprints/web-server-sink:3.0.21-native
         incoming:
           resources:
             initState: delta
@@ -267,6 +267,9 @@ processing:
             ref: outbox.indexable-resources
           indexable-resource-fragments:
             ref: outbox.indexable-resource-fragments
+        volumesFrom:
+          configs:
+            - "indexable-resources-producer.yaml:/deployments/config/application.yaml"
         environmentFrom:
           configs:
             - indexable-resources-producer.properties

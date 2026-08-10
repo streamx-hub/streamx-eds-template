@@ -1,0 +1,6 @@
+#!/bin/bash
+
+source ../utils.sh
+
+format_search_template V1.0.0.7.2__pages_search_template
+format_search_template V1.0.0.7.6__eds_pages_search_template
