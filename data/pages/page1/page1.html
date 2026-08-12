@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Using AIO to Test AEM/EDS CDN Configs on a Rapid Development Environment (RDE)</title>
+  <link rel="canonical" href="https://blog.arborydigital.com/en/blog/aem-and-eds-cdn-configs-on-rde-with-aio">
+  <meta name="description" content="How to configure custom Adobe Managed CDN logic and test it using AEM RDEs (Rapid Development Environments) and the AIO command-line interface">
+  <meta property="og:title" content="Using AIO to Test AEM/EDS CDN Configs on a Rapid Development Environment (RDE)">
+  <meta property="og:description" content="How to configure custom Adobe Managed CDN logic and test it using AEM RDEs (Rapid Development Environments) and the AIO command-line interface">
+  <meta property="og:url" content="https://blog.arborydigital.com/en/blog/aem-and-eds-cdn-configs-on-rde-with-aio">
+  <meta property="og:image" content="https://blog.arborydigital.com/en/blog/media_12e8c60784cef298e9495e480023c6d00a306ffc2.png?width=1200&#x26;format=pjpg&#x26;optimize=medium">
+  <meta property="og:image:secure_url" content="https://blog.arborydigital.com/en/blog/media_12e8c60784cef298e9495e480023c6d00a306ffc2.png?width=1200&#x26;format=pjpg&#x26;optimize=medium">
+  <meta property="article:tag" content="AEM">
+  <meta property="article:tag" content="EDS">
+  <meta property="article:tag" content="da">
+  <meta property="article:tag" content="performance">
+  <meta property="article:tag" content="adobe">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Using AIO to Test AEM/EDS CDN Configs on a Rapid Development Environment (RDE)">
+  <meta name="twitter:description" content="How to configure custom Adobe Managed CDN logic and test it using AEM RDEs (Rapid Development Environments) and the AIO command-line interface">
+  <meta name="twitter:image" content="https://blog.arborydigital.com/en/blog/media_12e8c60784cef298e9495e480023c6d00a306ffc2.png?width=1200&#x26;format=pjpg&#x26;optimize=medium">
+  <meta name="category" content="AEM Technical Help">
+  <meta name="author" content="Noah Mattison">
+  <meta name="date" content="20 November 2025">
+  <meta name="facets:category" value="EDS">
+  <meta name="facets:technology" value="AEM">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="google-site-verification" content="XIRTM7HiEKtqf_L6gBM37DY1SG50rAD6pdaLIjWQds8">
+  <script src="/scripts/aem.js" type="module"></script>
+  <script src="/scripts/scripts.js" type="module"></script>
+  <link rel="stylesheet" href="/styles/styles.css">
+</head>
+<body>
+<header></header>
+<main>
+  <div>
+    <div class="blog-post-hero">
+      <div>
+        <div></div>
+      </div>
+    </div>
+    <div class="section-metadata">
+      <div>
+        <div>style</div>
+        <div>border-bottom-glow</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <p>When AEM as a Cloud Service was first released, CDN behavior could only be controlled (in a <em>very</em> limited extent) through Apache configurations for cache-control. If you needed further customization, your only option was to bring your own CDN: meaning, to layer on an additional CDN like Cloudflare, Akamai or a self-configured Fastly, on-top of the inbuilt Adobe-managed Fastly CDN.</p>
+    <h2 id="introduction-to-adobe-managed-cdn-for-aem-as-a-cloud-service">Introduction to Adobe Managed CDN for AEM as a Cloud Service</h2>
+    <p>Last year, however, <a href="https://blog.arborydigital.com/en/blog/config-examples-for-managed-cdn-on-aem-as-a-cloud-service">Adobe rolled out a new Managed CDN feature</a> for AEM Cloud Service, greatly simplifying hybrid setups with <a href="https://blog.arborydigital.com/en/blog/aem-edge-delivery-developer-resources">Edge Delivery Services (aka Helix)</a> or with JCR-based AEM. We've got some architecture diagrams and other config examples for that <a href="https://blog.arborydigital.com/en/blog/config-examples-for-managed-cdn-on-aem-as-a-cloud-service">here</a>.</p>
+    <p>Configuration is done by creating a <code>/config/cdn.yaml</code> file in your AEM project and deploying it via a dedicated Config pipeline to manage environment-specific settings (e.g., DEV, STG, PROD). These lightweight pipelines typically run in just 1–2 minutes, allowing for efficient iteration and safe testing of new CDN logic before deploying to production.</p>
+    <p>However, deployments to an AEM as a Cloud Service Development Environment requires running a Cloud Manager pipeline, and running a Cloud Manager pipeline requires a git commit. You don't want to be debugging your syntax AND testing your configuration logic all with repeated git pushes to your develop branch, that's just messy (never mind absurdly time-consuming). <strong>Luckily</strong> there is a way to test this locally with minimal setup so you can have even more fun testing the same thing forty times to hopefully get your syntax right.</p>
+    <p>The secret to this is Adobe's Rapid Development Environments, or RDEs.</p>
+    <h2 id="setting-up--testing-cdn-configurations-on-an-aem-rde">Setting Up &#x26; Testing CDN Configurations on an AEM RDE</h2>
+    <p>The key difference between RDEs and the Dev, Stage and Production environments in an AEM as a Cloud Service environment is the RDE is meant to be deployed-to from an individual developer's workstation directly using the <code>aio</code> command line interface, as opposed to via a git-controlled Cloud Manager pipeline. These are intended for rapid iteration and debugging, but are shared environments - so changes can be validated and go through appropriate review processes before going into the Dev -> Stage -> Prod release cycle.</p>
+    <h3 id="set-up-an-rde-environment-with-a-cdn">Set Up an RDE Environment with a CDN</h3>
+    <p>In order to test your CDN configurations on an RDE, you'll first need to ensure that you have a hostname and SSL certificate configured in front of the RDE env in question, so that you have a CDN environment to configure. Note too that most AEMaaCS environments only have a single RDE environment provisioned, but that multiple environments <em>can</em> be provisioned for an extra cost, and may have done so as part of your company's AEM Cloud Service contract.</p>
+    <p>To set this up for an Edge Delivery Services domain, do the following:</p>
+    <p><strong>(1) Create domain in Cloud Manager</strong>: In your Adobe Cloud Manager UI, go to <strong>Domain Settings</strong> on the left-hand nav rail, and then click <strong>Add Domain</strong> in the
+      <picture>
+        <source type="image/webp" srcset="./media_1660595d8a0ab45cb2aa565b58061d6679b01396b.png?width=2000&#x26;format=webply&#x26;optimize=medium" media="(min-width: 600px)">
+        <source type="image/webp" srcset="./media_1660595d8a0ab45cb2aa565b58061d6679b01396b.png?width=750&#x26;format=webply&#x26;optimize=medium">
+        <source type="image/png" srcset="./media_1660595d8a0ab45cb2aa565b58061d6679b01396b.png?width=2000&#x26;format=png&#x26;optimize=medium" media="(min-width: 600px)">
+        <img loading="lazy" alt="" src="./media_1660595d8a0ab45cb2aa565b58061d6679b01396b.png?width=750&#x26;format=png&#x26;optimize=medium" width="3483" height="1099">
+      </picture>
+    </p>
+    <p>You'll want to set this up with an Adobe-managed certificate, which will then generate a verification code that you'll need to put in as a CNAME in your DNS provider in order to verify the certificate. Until that verification step is done, your certificate will show as "NOT VERIFIED"</p>
+    <p>
+      <picture>
+        <source type="image/webp" srcset="./media_1f333b7f85622ebe66e5f971ce76a59899a51cfdf.png?width=2000&#x26;format=webply&#x26;optimize=medium" media="(min-width: 600px)">
+        <source type="image/webp" srcset="./media_1f333b7f85622ebe66e5f971ce76a59899a51cfdf.png?width=750&#x26;format=webply&#x26;optimize=medium">
+        <source type="image/png" srcset="./media_1f333b7f85622ebe66e5f971ce76a59899a51cfdf.png?width=2000&#x26;format=png&#x26;optimize=medium" media="(min-width: 600px)">
+        <img loading="lazy" alt="" src="./media_1f333b7f85622ebe66e5f971ce76a59899a51cfdf.png?width=750&#x26;format=png&#x26;optimize=medium" width="2275" height="358">
+      </picture>
+    </p>
+    <p>Once it's verified, you can move on to the next step.</p>
+    <p>(2) <strong>Add the SSL Certificate:</strong> Once you've verified ownership on a domain, you can add an SSL certificate for that domain. You can use either an Adobe-managed certificate, or your own cert if you prefer such. Note that Cloud Manager will only populate domains that you've verified.</p>
+    <p>
+      <picture>
+        <source type="image/webp" srcset="./media_130f7715193de2e0a6f9191067fcd77d56b7a792b.png?width=2000&#x26;format=webply&#x26;optimize=medium" media="(min-width: 600px)">
+        <source type="image/webp" srcset="./media_130f7715193de2e0a6f9191067fcd77d56b7a792b.png?width=750&#x26;format=webply&#x26;optimize=medium">
+        <source type="image/png" srcset="./media_130f7715193de2e0a6f9191067fcd77d56b7a792b.png?width=2000&#x26;format=png&#x26;optimize=medium" media="(min-width: 600px)">
+        <img loading="lazy" alt="" src="./media_130f7715193de2e0a6f9191067fcd77d56b7a792b.png?width=750&#x26;format=png&#x26;optimize=medium" width="1510" height="1678">
+      </picture>
+    </p>
+    <p>(3) <strong>Map the domain to your RDE environment in Cloud Manager:</strong> You'll then need to map your domain to the RDE environment in Cloud Manager. In the left rail navigation, click on DOMAIN MAPPINGS, and then select "Adobe Managed CDN" as the CDN type, and chose the name of your RDE environment as the origin, <code>publish</code> as the tier, and select the domain and SSL certificate you created for this RDE env.</p>
+    <p>
+      <picture>
+        <source type="image/webp" srcset="./media_164fa3ccd6acd40c36e1c9b23b22d54c5ca0a1e53.png?width=2000&#x26;format=webply&#x26;optimize=medium" media="(min-width: 600px)">
+        <source type="image/webp" srcset="./media_164fa3ccd6acd40c36e1c9b23b22d54c5ca0a1e53.png?width=750&#x26;format=webply&#x26;optimize=medium">
+        <source type="image/png" srcset="./media_164fa3ccd6acd40c36e1c9b23b22d54c5ca0a1e53.png?width=2000&#x26;format=png&#x26;optimize=medium" media="(min-width: 600px)">
+        <img loading="lazy" alt="" src="./media_164fa3ccd6acd40c36e1c9b23b22d54c5ca0a1e53.png?width=750&#x26;format=png&#x26;optimize=medium" width="3081" height="1962">
+      </picture>
+    </p>
+    <p>(4) <strong>Map the domain to Adobe in DNS:</strong> In your DNS, create a CNAME record to map your RDE domain to <code>cdn.adobeaemcloud.com</code>. This will allow Adobe to pick up &#x26; route that domain accordingly.</p>
+    <p>
+      <picture>
+        <source type="image/webp" srcset="./media_1f7bc766e02e282126a47586155c6220236ee1d6f.png?width=2000&#x26;format=webply&#x26;optimize=medium" media="(min-width: 600px)">
+        <source type="image/webp" srcset="./media_1f7bc766e02e282126a47586155c6220236ee1d6f.png?width=750&#x26;format=webply&#x26;optimize=medium">
+        <source type="image/png" srcset="./media_1f7bc766e02e282126a47586155c6220236ee1d6f.png?width=2000&#x26;format=png&#x26;optimize=medium" media="(min-width: 600px)">
+        <img loading="lazy" alt="" src="./media_1f7bc766e02e282126a47586155c6220236ee1d6f.png?width=750&#x26;format=png&#x26;optimize=medium" width="3839" height="1755">
+      </picture>
+    </p>
+    <p>(5) <strong>Ensure your config.yml manages RDE environments:</strong> Lastly, if you followed <a href="https://blog.arborydigital.com/en/blog/config-examples-for-managed-cdn-on-aem-as-a-cloud-service">this how-to on setting up Adobe Managed CDN</a>, when you configured your <code>cdn.yml</code>, make sure that the RDE is listed as one of the environments the config pertains to:</p>
+    <pre><code>kind: "CDN"
+version: "1"
+metadata:
+  envTypes: ["rde", "dev", "stage", "prod"]
+data:
+</code></pre>
+    <h3 id="using-the-aio-cli-to-push-configs-to-the-rdes-cdn">Using the AIO CLI to Push Configs to the RDE's CDN</h3>
+    <p>Once you have an RDE set up and ready to accept your CDN configuration, you're ready to set up your workstation to be able to push CDN configs to the RDE.</p>
+    <p>1. Get NPM, Node and NVM on your machine. You'll want to use nodejs 20</p>
+    <p>2. install the Adobe I/O runtime with <code>npm install -g @adobe/aio-cli</code></p>
+    <p>3. install and update your AIO plugins:<br><code>aio plugins:install @adobe/aio-cli-plugin-cloudmanager</code></p>
+    <p><code>aio plugins:install @adobe/aio-cli-plugin-aem-rde aio plugins:update</code></p>
+    <p>4. Authenticate with aio login which will pop a browser window - make sure you use your IMS profile for the AEMaaCS account you're working with, otherwise you may need to <code>aio logout</code> and re-select.</p>
+    <ol>
+      <li>Set your organization with <code>aio cloudmanager:org:select</code></li>
+    </ol>
+    <p>5. Set your program ID to your org's ID with <code>aio config:set cloudmanager_programid {YOUR PROGRAM ID GOES HERE}</code></p>
+    <ol>
+      <li>If you want to see the environments you have access to, use <code>aio cloudmanager:list-environments</code> .This will show you which environment the RDE is located in</li>
+      <li>Use this to set the CloudManager EnvironmentID. This can be done by using <code>aio config:set cloudmanager_environmentID {YOUR ENVIRONMENT ID GOES HERE}</code></li>
+    </ol>
+    <p>6. Initiate your RDE setup with <code>aio aem:rde:setup</code> - it will ask if you want to store locally, say yes please</p>
+    <p>7. Try <code>aio aem:rde:status</code> and see if it lets you use the RDE. It should respond like this:</p>
+    <pre><code>PS C:\Users\Noah\Desktop\my-aemaacs> aio aem:rde:status
+Running aem:rde:status on cm-p104400-e1291792
+Info for cm-p104400-e1291743
+Environment: Ready
+</code></pre>
+    <p>Once you have set this up, you are ready to begin testing your config. If you have not already, now would be a good time to create a new branch that will reflect your changes. Then you will need to ensure you are in the proper directory of the config you would like to test. After that is done you can use <code>aio aem:rde:install -t env-config ./config</code> to install your CDN config to the directory. This will list any syntax errors you might have.</p>
+    <pre><code>PS C:\Users\Noah\Desktop\my-aemaacs> aio aem:rde:install -t env-config ./config
+Running aem:rde:status on cm-p104400-e1291743
+Zipped file /tmp/aio-rde-RF1WAb/config.zip of 2584 total bytes
+Uploading ████████████████████████████████████████ 100% | ETA: 0s | 3/3 KB
+#42: deploy completed for env-config config.zip on author,publish - done by 66E11EA86517050C0A495EAB@c23e2a2e64229a46495fae.e at 2025-10-24T21:15:59.387Z
+Logs:
+> State: complete
+</code></pre>
+    <p>Testing something like a CDN config can be tricky sometimes, but there are ways to do so locally. Even though testing will be done locally, we still need to utilize the backend logic that will be used by the CDN. If done properly, this will let us see how the CDN config is interacting with the test URLs without the need to push it to a development branch.</p>
+    <p>Your next step will likely be to create a pull request to get approval for pushing you changes into dev, based on the branching strategy in-use in your organization. When your PR has been approved, the configs can be pushed to the repository configured for your Cloud Manager pipelines, where it can then be pushed to the development environment for further testing, and then on to Prod!</p>
+    <p>Using this approach, individual developers can be entirely productive in developing and testing CDN configurations confidently, knowing they have a very good chance of working in production!</p>
+    <h2 id="about-the-author">About the Author</h2>
+    <div class="author-rows">
+      <div>
+        <div>
+          <picture>
+            <source type="image/webp" srcset="./media_173810b36fd35b9ac2c659859ccb687d05f6e514d.jpg?width=2000&#x26;format=webply&#x26;optimize=medium" media="(min-width: 600px)">
+            <source type="image/webp" srcset="./media_173810b36fd35b9ac2c659859ccb687d05f6e514d.jpg?width=750&#x26;format=webply&#x26;optimize=medium">
+            <source type="image/jpeg" srcset="./media_173810b36fd35b9ac2c659859ccb687d05f6e514d.jpg?width=2000&#x26;format=jpg&#x26;optimize=medium" media="(min-width: 600px)">
+            <img loading="lazy" alt="" src="./media_173810b36fd35b9ac2c659859ccb687d05f6e514d.jpg?width=750&#x26;format=jpg&#x26;optimize=medium" width="823" height="1024">
+          </picture>
+        </div>
+        <div>
+          <p><strong>Noah Mattison</strong></p>
+          <p><em>Technical Delivery Manager at Arbory Digital</em></p>
+          <p>Noah is a Computer Science graduate from UNC Wilmington, originally a pre-med student with a passion for cancer detection and AI. At Arbory, he helps plan project execution, delegates work across teams, maintains strong communication, and supports internal operations. He believes in Arbory’s community and vision. He is environmentally focused and enjoys staying active outdoors, camping, rock climbing, and spending time with friends.</p>
+          <p><a href="https://www.linkedin.com/in/noahmattison/" title="Contact Noah Mattison on LinkedIn">Contact Noah on LinkedIn</a></p>
+        </div>
+      </div>
+    </div>
+    <p>Like what you heard? Have questions about what’s right for you? We’d love to talk! <a href="https://arborydigital.com/">Contact Us</a></p>
+    <div class="section-metadata">
+      <div>
+        <div>style</div>
+        <div>blog-post-bg-fade</div>
+      </div>
+    </div>
+  </div>
+  <div>
+    <h2 id="podcast-episodes">Podcast Episodes</h2>
+    <div class="article-feed card-3">
+      <div>
+        <div>category</div>
+        <div>AEM Technical Help, AEM News, Arbory Digital News, Customer Stories, Podcasts</div>
+      </div>
+      <div>
+        <div>tags</div>
+        <div>AEM, EDS, da, performance</div>
+      </div>
+      <div>
+        <div>number of rows</div>
+        <div>1</div>
+      </div>
+    </div>
+  </div>
+</main>
+<footer></footer>
+</body>
+</html>
